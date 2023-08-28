@@ -25,6 +25,7 @@ public class JFXArena extends Pane
     private int gridHeight = 9;
     private double robotX = 1.0;
     private double robotY = 3.0;
+    private int robotCount = 0; //total robots in the screen
 
     private double gridSquareSize; // Auto-calculated
     private Canvas canvas; // Used to provide a 'drawing surface'.
@@ -235,4 +236,26 @@ public class JFXArena extends Pane
                        (gridX2 + 0.5) * gridSquareSize, 
                        (gridY2 + 0.5) * gridSquareSize);
     }
+
+    public int getGridWidth() {
+        return gridWidth;
+    }
+
+    public void setGridWidth(int gridWidth) {
+        this.gridWidth = gridWidth;
+    }
+
+    public int getGridHeight() {
+        return gridHeight;
+    }
+
+    public void setGridHeight(int gridHeight) {
+        this.gridHeight = gridHeight;
+    }
+
+    public int getRobotCount(){
+        return robotCount;
+    }
+
+    public void incrementRobotCount() {robotCount += 1;}
 }
