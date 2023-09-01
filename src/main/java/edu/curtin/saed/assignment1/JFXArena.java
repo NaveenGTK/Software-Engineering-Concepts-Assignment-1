@@ -9,6 +9,8 @@ import javafx.scene.text.TextAlignment;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * A JavaFX GUI element that displays a grid on which you can draw images, text and lines.
@@ -23,14 +25,15 @@ public class JFXArena extends Pane
     // requirements of your application.
     private int gridWidth = 9;
     private int gridHeight = 9;
-    private double robotX = 1.0;
-    private double robotY = 3.0;
     private int robotCount = 0; //total robots in the screen
 
     private double gridSquareSize; // Auto-calculated
     private Canvas canvas; // Used to provide a 'drawing surface'.
 
     private List<ArenaListener> listeners = null;
+    private BlockingQueue<Robot> robotQueue = new LinkedBlockingQueue<>();
+    //Initializing Grid Array
+    private GridSquare[][] gridArray = new GridSquare[gridWidth][gridHeight];
     
     /**
      * Creates a new arena object, loading the robot image and initialising a drawing surface.
@@ -59,6 +62,13 @@ public class JFXArena extends Pane
         {
             throw new AssertionError("Cannot load image file " + IMAGE_FILE, e);
         }
+
+        // Fill the array with false values
+        for (int i = 0; i < gridHeight; i++) {
+            for (int j = 0; j < gridWidth; j++) {
+                gridArray[i][j] = new GridSquare(false);
+            }
+        }
         
         canvas = new Canvas();
         canvas.widthProperty().bind(widthProperty());
@@ -73,8 +83,8 @@ public class JFXArena extends Pane
      */
     public void setRobotPosition(double x, double y)
     {
-        robotX = x;
-        robotY = y;
+        //robotX = x;
+        //robotY = y;
         requestLayout();
     }
     
@@ -149,8 +159,17 @@ public class JFXArena extends Pane
 
         // Invoke helper methods to draw things at the current location.
         // ** You will need to adapt this to the requirements of your application. **
-        drawImage(gfx, robot1, robotX, robotY);
-        drawLabel(gfx, "Robot Name", robotX, robotY);
+        for (int i = 0; i < getRobotCount(); i++) {
+            try {
+                Robot robot = robotQueue.take();
+                drawImage(gfx, robot1, robot.getRobotX(), robot.getRobotY());
+                drawLabel(gfx, Integer.toString(robot.getId()), robot.getRobotX(), robot.getRobotY());
+                robotQueue.add(robot);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
     }
     
     
@@ -219,6 +238,7 @@ public class JFXArena extends Pane
      *     
      * You shouldn't need to modify this method.
      */
+    /*
     private void drawLine(GraphicsContext gfx, double gridX1, double gridY1, 
                                                double gridX2, double gridY2)
     {
@@ -235,7 +255,7 @@ public class JFXArena extends Pane
                        (clippedGridY1 + 0.5) * gridSquareSize, 
                        (gridX2 + 0.5) * gridSquareSize, 
                        (gridY2 + 0.5) * gridSquareSize);
-    }
+    }*/
 
     public int getGridWidth() {
         return gridWidth;
@@ -258,4 +278,8 @@ public class JFXArena extends Pane
     }
 
     public void incrementRobotCount() {robotCount += 1;}
+
+    public void addRobotToQueue(Robot robot) {robotQueue.add(robot);}
+
+    public GridSquare[][] getGridArray() {return gridArray;}
 }

@@ -2,7 +2,6 @@ package edu.curtin.saed.assignment1;
 
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.concurrent.Task;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -10,12 +9,10 @@ import javafx.stage.Stage;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 public class App extends Application 
 {
-    Thread scoreThread;
+    private Thread scoreThread;
     public static void main(String[] args) 
     {
         launch();        
@@ -26,10 +23,11 @@ public class App extends Application
     {
         stage.setTitle("Example App (JavaFX)");
         JFXArena arena = new JFXArena();
-        Citadel citadel = new Citadel(5,5);
+        //Citadel citadel = new Citadel(5,5);
         TextArea logger = new TextArea();
-        ScoreController scoreController = new ScoreController(logger);
-        RobotSpawner robotSpawner = new RobotSpawner(citadel,arena,logger);
+        ScoreController scoreController = new ScoreController();
+        ExecutorService executorService = Executors.newFixedThreadPool(5); // Adjust thread pool size as needed
+        RobotSpawner robotSpawner = new RobotSpawner(arena, logger);
 
         arena.addListener((x, y) ->
         {
@@ -78,7 +76,7 @@ public class App extends Application
             }
         });
         scoreThread.start();
-        spawnRobots(robotSpawner);
+        robotSpawner.spawn(executorService);
     }
 
     @Override
@@ -86,13 +84,5 @@ public class App extends Application
         scoreThread.interrupt();
     }
 
-    private void spawnRobots(RobotSpawner robotSpawner) {
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-        Runnable spawnTask = () -> {
-            robotSpawner.spawn();
-        };
-
-        scheduler.scheduleAtFixedRate(spawnTask, 0, 1500, TimeUnit.MILLISECONDS);
-    }
 }
