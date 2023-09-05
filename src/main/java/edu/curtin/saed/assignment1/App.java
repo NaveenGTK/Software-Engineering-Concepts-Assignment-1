@@ -3,16 +3,21 @@ package edu.curtin.saed.assignment1;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.control.Label;
+import javafx.scene.control.SplitPane;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.ToolBar;
+import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 public class App extends Application 
 {
-    private Thread scoreThread;
+    private Thread scoreThread, wallBuilderThread, wallCreatorThread;
+    private BlockingQueue<Wall> wallQueue;
+    private int maxWalls;
+    private int curWalls;
     public static void main(String[] args) 
     {
         launch();        
@@ -22,16 +27,34 @@ public class App extends Application
     public void start(Stage stage) 
     {
         stage.setTitle("Example App (JavaFX)");
-        JFXArena arena = new JFXArena();
-        //Citadel citadel = new Citadel(5,5);
+        Citadel citadel = new Citadel(4.0,4.0);
+        JFXArena arena = new JFXArena(citadel);
         TextArea logger = new TextArea();
         ScoreController scoreController = new ScoreController();
-        ExecutorService executorService = Executors.newFixedThreadPool(5); // Adjust thread pool size as needed
-        RobotSpawner robotSpawner = new RobotSpawner(arena, logger);
+        ExecutorService executorService = Executors.newFixedThreadPool(8);
+        RobotSpawner robotSpawner = new RobotSpawner(arena, logger, citadel);
 
+        wallQueue = new ArrayBlockingQueue<>(10);
+        maxWalls = 10;
+        curWalls = 0;
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
         arena.addListener((x, y) ->
         {
             System.out.println("Arena click at (" + x + "," + y + ")");
+            if (curWalls <= maxWalls) {
+                Wall wall = new Wall(x, y);
+                executor.submit(() -> {
+                    try {
+                        Thread.sleep(2000);
+                        wallQueue.offer(wall);
+                        curWalls += 1;
+                        logger.appendText("Curwall count: " + curWalls);
+                    } catch (InterruptedException e) {
+                        System.out.println(e);
+                    }
+                });
+            }
         });
         
         ToolBar toolbar = new ToolBar();
@@ -75,7 +98,27 @@ public class App extends Application
                 Thread.currentThread().interrupt();
             }
         });
+
+
+        wallBuilderThread = new Thread(() -> {
+            while (curWalls <= maxWalls) {
+                Wall wall = wallQueue.poll();
+                if (wall != null) {
+                    logger.appendText("\nPolled a wall!");
+                    arena.addWallToQueue(wall);
+                    arena.incrementWallCount();
+                } else {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            }
+        });
+
         scoreThread.start();
+        wallBuilderThread.start();
         robotSpawner.spawn(executorService);
     }
 

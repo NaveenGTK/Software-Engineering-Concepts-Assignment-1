@@ -2,30 +2,22 @@ package edu.curtin.saed.assignment1;
 
 public class Citadel {
 
-    private int posX;
-    private int posY;
+    private double posX;
+    private double posY;
     private boolean destroyed;
 
-    public Citadel(int posX, int posY) {
+    public Citadel(double posX, double posY) {
         this.posX = posX;
         this.posY = posY;
         this.destroyed = false;
     }
 
-    public int getPosX() {
+    public double getPosX() {
         return posX;
     }
 
-    public void setPosX(int posX) {
-        this.posX = posX;
-    }
-
-    public int getPosY() {
+    public double getPosY() {
         return posY;
-    }
-
-    public void setPosY(int posY) {
-        this.posY = posY;
     }
 
     public boolean isDestroyed() {
