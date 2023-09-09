@@ -12,12 +12,11 @@ public class Wall {
         this.y = y;
     }
 
-    public int getHealth() {
-        return health;
-    }
-
-    public void setHealth(int health) {
-        this.health = health;
+    public void decrementHealth(){
+        health -= 1;
+        if (health <= 0) {
+            setDestroyed(true);
+        }
     }
 
     public boolean isDestroyed() {
@@ -35,4 +34,6 @@ public class Wall {
     public double getY() {
         return y;
     }
+
+    public int getHealth() {return health;}
 }

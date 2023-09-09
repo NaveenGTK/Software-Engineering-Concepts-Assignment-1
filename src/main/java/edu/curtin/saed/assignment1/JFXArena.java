@@ -9,6 +9,7 @@ import javafx.scene.text.TextAlignment;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -18,8 +19,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class JFXArena extends Pane
 {
     // Represents an image to draw, retrieved as a project resource.
-    private static final String[] IMAGE_FILE = {"1554047213.png", "rg1024-isometric-tower.png", "181478.png"};
-    private Image robot1, citadel1, wall1;
+    private static final String[] IMAGE_FILE = {"1554047213.png", "rg1024-isometric-tower.png", "181478.png", "181479.png"};
+    private Image robot1, citadel1, wall1, wall2;
     
     // The following values are arbitrary, and you may need to modify them according to the 
     // requirements of your application.
@@ -34,7 +35,7 @@ public class JFXArena extends Pane
 
     private List<ArenaListener> listeners = null;
     private BlockingQueue<Robot> robotQueue = new LinkedBlockingQueue<>();
-    private BlockingQueue<Wall> wallQueue = new LinkedBlockingQueue<>();
+    private BlockingQueue<Wall> wallQueue = new ArrayBlockingQueue<>(10);
     //Initializing Grid Array
     private GridSquare[][] gridArray = new GridSquare[gridWidth][gridHeight];
     
@@ -84,6 +85,17 @@ public class JFXArena extends Pane
 
         } catch (IOException e) {
             throw new AssertionError("Cannot load image file " + s2, e);
+        }
+
+        String s3 = IMAGE_FILE[3];
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream(s3)) {
+            if (is == null) {
+                throw new AssertionError("Cannot find image file " + s3);
+            }
+            wall2 = new Image(is);
+
+        } catch (IOException e) {
+            throw new AssertionError("Cannot load image file " + s3, e);
         }
 
 
@@ -188,9 +200,11 @@ public class JFXArena extends Pane
         for (int i = 0; i < getRobotCount(); i++) {
             try {
                 Robot robot = robotQueue.take();
-                drawImage(gfx, robot1, robot.getRobotX(), robot.getRobotY());
-                drawLabel(gfx, Integer.toString(robot.getId()), robot.getRobotX(), robot.getRobotY());
-                robotQueue.add(robot);
+                if (! robot.isDestroyed()) {
+                    drawImage(gfx, robot1, robot.getRobotX(), robot.getRobotY());
+                    drawLabel(gfx, Integer.toString(robot.getId()), robot.getRobotX(), robot.getRobotY());
+                    robotQueue.add(robot);
+                }
             } catch (InterruptedException e) {
                 System.out.println(e.toString());
             }
@@ -199,8 +213,15 @@ public class JFXArena extends Pane
         for (int i = 0; i < getWallCount(); i++) {
             try {
                 Wall wall = wallQueue.take();
-                drawImage(gfx, wall1, wall.getX(), wall.getY());
-                wallQueue.add(wall);
+                if (! wall.isDestroyed()){
+                    if (wall.getHealth() > 1){
+                        drawImage(gfx, wall1, wall.getX(), wall.getY());
+                    } else {
+                        drawImage(gfx, wall2, wall.getX(), wall.getY());
+                    }
+                    wallQueue.add(wall);
+                }
+
             } catch (InterruptedException e) {
                 System.out.println(e.toString());
             }
@@ -326,6 +347,8 @@ public class JFXArena extends Pane
     public void incrementWallCount() {wallCount += 1;}
 
     public void addWallToQueue(Wall wall) {wallQueue.add(wall);}
+
+    public BlockingQueue<Wall> getWallQueue() {return wallQueue;}
 
     public GridSquare[][] getGridArray() {return gridArray;}
 }

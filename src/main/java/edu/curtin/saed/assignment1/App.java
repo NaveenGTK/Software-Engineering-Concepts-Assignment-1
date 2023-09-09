@@ -14,7 +14,7 @@ import java.util.concurrent.*;
 
 public class App extends Application 
 {
-    private Thread scoreThread, wallBuilderThread, wallCreatorThread;
+    private Thread scoreThread, wallBuilderThread;
     private BlockingQueue<Wall> wallQueue;
     private int maxWalls;
     private int curWalls;
@@ -34,9 +34,10 @@ public class App extends Application
         ExecutorService executorService = Executors.newFixedThreadPool(8);
         RobotSpawner robotSpawner = new RobotSpawner(arena, logger, citadel);
 
-        wallQueue = new ArrayBlockingQueue<>(10);
+        wallQueue = arena.getWallQueue();
         maxWalls = 10;
         curWalls = 0;
+        GridSquare[][] gridArray = arena.getGridArray();
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         arena.addListener((x, y) ->
@@ -47,9 +48,11 @@ public class App extends Application
                 executor.submit(() -> {
                     try {
                         Thread.sleep(2000);
-                        wallQueue.offer(wall);
-                        curWalls += 1;
-                        logger.appendText("Curwall count: " + curWalls);
+                        boolean r = wallQueue.offer(wall);
+                        if(r){
+                            curWalls += 1;
+                            logger.appendText("Curwall count: " + curWalls);
+                        }
                     } catch (InterruptedException e) {
                         System.out.println(e);
                     }
@@ -105,8 +108,11 @@ public class App extends Application
                 Wall wall = wallQueue.poll();
                 if (wall != null) {
                     logger.appendText("\nPolled a wall!");
+                    gridArray[(int) wall.getX()][(int) wall.getY()].setWall(wall);
+                    logger.appendText("Added wall to "+ wall.getX() + " " + wall.getY());
                     arena.addWallToQueue(wall);
                     arena.incrementWallCount();
+
                 } else {
                     try {
                         Thread.sleep(100);

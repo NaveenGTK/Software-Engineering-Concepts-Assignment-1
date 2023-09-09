@@ -14,8 +14,7 @@ public class Robot {
     private TextArea logger;
     private Citadel citadel;
     private JFXArena arena;
-    //private static final String IMAGE_FILE = "1554047213.png";
-    //private Image robot1;
+    private boolean destroyed;
     private ExecutorService executorService;
 
     public Robot(int id, double robotX, double robotY, Citadel citadel, TextArea logger, ExecutorService exec, JFXArena arena) {
@@ -27,6 +26,7 @@ public class Robot {
         this.arena = arena;
         this.delay = new Random().nextInt(2000-500)+500;
         this.executorService = exec;
+        this.destroyed = false;
     }
 
     public void startRobotBehavior() {
@@ -70,12 +70,12 @@ public class Robot {
         this.robotY = robotY;
     }
 
-    public TextArea getLogger() {
-        return logger;
+    public boolean isDestroyed() {
+        return destroyed;
     }
 
-    public void setLogger(TextArea logger) {
-        this.logger = logger;
+    public void setDestroyed(boolean destroyed) {
+        this.destroyed = destroyed;
     }
 
     private void nextMove() {
@@ -98,7 +98,7 @@ public class Robot {
 
         // Check if the robot is already at the citadel
         if (absDisX == 0 && absDisY == 0) {
-             // No need to move
+            // No need to move
             setRobotX(20.0);
             setRobotY(20.0);
             gridArray[(int) citadelX][(int) citadelY].setHasObject(false);
@@ -121,6 +121,14 @@ public class Robot {
         // Ensure the robot stays within the grid boundaries
         nextX = Math.max(0, Math.min(gridWidth - 1, nextX));
         nextY = Math.max(0, Math.min(gridHeight - 1, nextY));
+
+        //Check if on wall
+        if (gridArray[(int) curX][(int) curY].getWall() != null) {
+            Wall wall = gridArray[(int) curX][(int) curY].getWall();
+            System.out.println("Wall found by Robot " + this.id);
+            wall.decrementHealth();
+            setDestroyed(true);
+        }
 
         // Check if the next position is occupied by another robot
         if (!gridArray[(int) nextX][(int) nextY].hasObject()) {
