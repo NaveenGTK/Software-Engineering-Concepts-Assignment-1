@@ -12,78 +12,66 @@ import javafx.stage.Stage;
 
 import java.util.concurrent.*;
 
-public class App extends Application 
+public class App extends Application
 {
     private Thread scoreThread, wallBuilderThread;
-    private BlockingQueue<Wall> wallQueue;
+    private WallSpawner wallSpawner;
     private int maxWalls;
-    private int curWalls;
-    public static void main(String[] args) 
+    public static void main(String[] args)
     {
-        launch();        
+        launch();
     }
-    
+
     @Override
-    public void start(Stage stage) 
+    public void start(Stage stage)
     {
         stage.setTitle("Example App (JavaFX)");
         Citadel citadel = new Citadel(4.0,4.0);
+        wallSpawner = new WallSpawner(10);
         JFXArena arena = new JFXArena(citadel);
         TextArea logger = new TextArea();
         ScoreController scoreController = new ScoreController();
         ExecutorService executorService = Executors.newFixedThreadPool(8);
         RobotSpawner robotSpawner = new RobotSpawner(arena, logger, citadel);
 
-        wallQueue = arena.getWallQueue();
         maxWalls = 10;
-        curWalls = 0;
         GridSquare[][] gridArray = arena.getGridArray();
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        arena.addListener((x, y) ->
-        {
-            System.out.println("Arena click at (" + x + "," + y + ")");
-            if (curWalls <= maxWalls) {
-                Wall wall = new Wall(x, y);
-                executor.submit(() -> {
-                    try {
-                        Thread.sleep(2000);
-                        boolean r = wallQueue.offer(wall);
-                        if(r){
-                            curWalls += 1;
-                            logger.appendText("Curwall count: " + curWalls);
-                        }
-                    } catch (InterruptedException e) {
-                        System.out.println(e);
-                    }
-                });
-            }
-        });
-        
+
         ToolBar toolbar = new ToolBar();
 //         Button btn1 = new Button("My Button 1");
 //         Button btn2 = new Button("My Button 2");
         Label label = new Label("Score: ");
 //         toolbar.getItems().addAll(btn1, btn2, label);
         toolbar.getItems().addAll(label);
-        
+
 //         btn1.setOnAction((event) ->
 //         {
 //             System.out.println("Button 1 pressed");
 //         });
-                    
+
+        arena.addListener((x, y) -> {
+            try {
+                System.out.println("Arena click at (" + x + "," + y + ")");
+                Wall wall = new Wall(x, y);
+                wallSpawner.addWall(wall);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
 
         logger.appendText("Hello\n");
         logger.appendText("World\n");
-        
+
         SplitPane splitPane = new SplitPane();
         splitPane.getItems().addAll(arena, logger);
         arena.setMinWidth(300.0);
-        
+
         BorderPane contentPane = new BorderPane();
         contentPane.setTop(toolbar);
         contentPane.setCenter(splitPane);
-        
+
         Scene scene = new Scene(contentPane, 800, 800);
         stage.setScene(scene);
         stage.show();
@@ -102,17 +90,37 @@ public class App extends Application
             }
         });
 
-
         wallBuilderThread = new Thread(() -> {
-            while (curWalls <= maxWalls) {
-                Wall wall = wallQueue.poll();
-                if (wall != null) {
+            while (true) {
+                Wall wall;
+                try {
+                    wall = wallSpawner.pollWall();
                     logger.appendText("\nPolled a wall!");
-                    gridArray[(int) wall.getX()][(int) wall.getY()].setWall(wall);
-                    logger.appendText("Added wall to "+ wall.getX() + " " + wall.getY());
-                    arena.addWallToQueue(wall);
-                    arena.incrementWallCount();
+                    if (! wall.isDestroyed()) {
+                        gridArray[(int) wall.getX()][(int) wall.getY()].setWall(wall);
+                        logger.appendText("Added wall to " + wall.getX() + " " + wall.getY());
+                        arena.addToWallQueue(wall);
+                        Thread.sleep(2000);
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
 
+        /*
+        wallBuilderThread = new Thread(() -> {
+            while (wallSpawner.getCurrentWalls() < 10) {
+                Wall wall = wallSpawner.pollWall();
+                if (wall != null) {
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    //arena.addWallToQueue(wall);
+                    arena.incrementWallCount();
                 } else {
                     try {
                         Thread.sleep(100);
@@ -121,7 +129,8 @@ public class App extends Application
                     }
                 }
             }
-        });
+        });*/
+
 
         scoreThread.start();
         wallBuilderThread.start();

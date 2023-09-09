@@ -126,8 +126,10 @@ public class Robot {
         if (gridArray[(int) curX][(int) curY].getWall() != null) {
             Wall wall = gridArray[(int) curX][(int) curY].getWall();
             System.out.println("Wall found by Robot " + this.id);
-            wall.decrementHealth();
-            setDestroyed(true);
+            if (! wall.isDestroyed()){
+                wall.decrementHealth();
+                setDestroyed(true);
+            }
         }
 
         // Check if the next position is occupied by another robot
