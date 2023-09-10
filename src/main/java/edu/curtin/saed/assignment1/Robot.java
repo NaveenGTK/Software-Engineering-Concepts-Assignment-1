@@ -33,8 +33,10 @@ public class Robot {
         executorService.submit(() -> {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    Thread.sleep(delay);
-                    attackCitadel();
+                    if (! this.isDestroyed()){
+                        Thread.sleep(delay);
+                        attackCitadel();
+                    }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -137,10 +139,10 @@ public class Robot {
             // The next position is not occupied, so update the position and set it in the arena
             gridArray[(int) curX][(int) curY].setHasObject(false);
             gridArray[(int) nextX][(int) nextY].setHasObject(true);
-            setRobotX(nextX);
-            setRobotY(nextY);
-            arena.setRobotPosition(nextX, nextY);
-        } else {
+
+            animateRobot(curX, curY, nextX, nextY);
+        }
+        else {
             // The next position is occupied, so find a random direction to move
             while (true) {
                 int randomDirection = (int) (Math.random() * 4); // 0 for up, 1 for down, 2 for left, 3 for right
@@ -167,13 +169,40 @@ public class Robot {
                 if (!gridArray[(int) nextX][(int) nextY].hasObject()) {
                     gridArray[(int) curX][(int) curY].setHasObject(false);
                     gridArray[(int) nextX][(int) nextY].setHasObject(true);
-                    setRobotX(nextX);
-                    setRobotY(nextY);
-                    arena.setRobotPosition(nextX, nextY);
+                    animateRobot(curX, curY, nextX, nextY);
                     break;
                 }
             }
         }
+    }
+
+    private void animateRobot(double curX, double curY, double nextX, double nextY) {
+        long startTime = System.currentTimeMillis();
+        long animationDuration = 400;
+        double progress;
+
+        while (System.currentTimeMillis() - startTime < animationDuration) {
+            // Calculate the animation progress as a value between 0 and 1
+            progress = (double) (System.currentTimeMillis() - startTime) / animationDuration;
+
+            // Calculate the intermediate position based on progress
+            double intermediateX = curX + (nextX - curX) * progress;
+            double intermediateY = curY + (nextY - curY) * progress;
+
+            try {
+                setRobotX(intermediateX);
+                setRobotY(intermediateY);
+                arena.setRobotPosition(intermediateX, intermediateY);
+                Thread.sleep(40);
+            } catch (InterruptedException interruptedException) {
+                System.out.println(interruptedException.toString());
+            }
+        }
+
+        // Ensure the final position is set correctly
+        setRobotX(nextX);
+        setRobotY(nextY);
+        arena.setRobotPosition(nextX, nextY);
     }
 
 

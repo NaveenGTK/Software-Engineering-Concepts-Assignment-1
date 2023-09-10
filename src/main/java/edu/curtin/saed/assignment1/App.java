@@ -14,7 +14,8 @@ import java.util.concurrent.*;
 
 public class App extends Application
 {
-    private Thread scoreThread, wallBuilderThread;
+    private Thread scoreThread, wallBuilderThread, wallListenerThread;
+    private static final Wall POISON = new Wall(20,20);
     private WallSpawner wallSpawner;
     private int maxWalls;
     public static void main(String[] args)
@@ -51,15 +52,18 @@ public class App extends Application
 //             System.out.println("Button 1 pressed");
 //         });
 
-        arena.addListener((x, y) -> {
-            try {
-                System.out.println("Arena click at (" + x + "," + y + ")");
-                Wall wall = new Wall(x, y);
-                wallSpawner.addWall(wall);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        wallListenerThread = new Thread(() -> {
+            arena.addListener((x, y) -> {
+                try {
+                    System.out.println("Arena click at (" + x + "," + y + ")");
+                    Wall wall = new Wall(x, y);
+                    wallSpawner.addWall(wall);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
         });
+
 
         logger.appendText("Hello\n");
         logger.appendText("World\n");
@@ -96,43 +100,32 @@ public class App extends Application
                 try {
                     wall = wallSpawner.pollWall();
                     logger.appendText("\nPolled a wall!");
-                    if (! wall.isDestroyed()) {
-                        gridArray[(int) wall.getX()][(int) wall.getY()].setWall(wall);
-                        logger.appendText("Added wall to " + wall.getX() + " " + wall.getY());
-                        arena.addToWallQueue(wall);
-                        Thread.sleep(2000);
+                    if (wall != null) {
+                        if (! wall.isDestroyed()) {
+                            Platform.runLater(() -> {
+                                gridArray[(int) wall.getX()][(int) wall.getY()].setWall(wall);
+                                logger.appendText("Added wall to " + wall.getX() + " " + wall.getY());
+                                arena.addToWallQueue(wall);
+                            });
+                            Thread.sleep(2000);
+                        }
+                    } else {
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
                     }
+
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
         });
 
-        /*
-        wallBuilderThread = new Thread(() -> {
-            while (wallSpawner.getCurrentWalls() < 10) {
-                Wall wall = wallSpawner.pollWall();
-                if (wall != null) {
-                    try {
-                        Thread.sleep(2000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-
-                    //arena.addWallToQueue(wall);
-                    arena.incrementWallCount();
-                } else {
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
-            }
-        });*/
-
 
         scoreThread.start();
+        wallListenerThread.start();
         wallBuilderThread.start();
         robotSpawner.spawn(executorService);
     }
@@ -140,6 +133,8 @@ public class App extends Application
     @Override
     public void stop() throws IllegalStateException {
         scoreThread.interrupt();
+        wallListenerThread.interrupt();
+        wallBuilderThread.interrupt();
     }
 
 

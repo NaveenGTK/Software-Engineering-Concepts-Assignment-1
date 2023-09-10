@@ -23,7 +23,12 @@ public class WallSpawner {
     }
 
     public Wall pollWall() throws InterruptedException {
-        return wallQueue.take();
+        if (curWalls >= 0) {
+            Wall wall = wallQueue.take();
+            curWalls--;
+            return wall;
+        }
+        return null;
     }
 
     public int getCurrentWalls() {
