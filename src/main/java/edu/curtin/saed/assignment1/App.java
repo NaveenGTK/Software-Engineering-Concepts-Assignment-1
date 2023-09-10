@@ -33,7 +33,7 @@ public class App extends Application
         TextArea logger = new TextArea();
         //ScoreController scoreController = new ScoreController();
         ExecutorService executorService = Executors.newFixedThreadPool(8);
-        RobotSpawner robotSpawner = new RobotSpawner(arena, logger, citadel);
+
 
         maxWalls = 10;
         GridSquare[][] gridArray = arena.getGridArray();
@@ -52,6 +52,9 @@ public class App extends Application
 //         {
 //             System.out.println("Button 1 pressed");
 //         });
+
+        ScoreController scoreController = new ScoreController(label);
+        RobotSpawner robotSpawner = new RobotSpawner(arena, logger, citadel, scoreController);
 
         wallListenerThread = new Thread(() -> {
             arena.addListener((x, y) -> {
@@ -81,21 +84,6 @@ public class App extends Application
         stage.setScene(scene);
         stage.show();
 
-        /*
-        scoreThread = new Thread(() -> {
-            try {
-                while (!Thread.currentThread().isInterrupted()) {
-                    Platform.runLater(() -> {
-                        scoreController.addPoints(10);
-                        label.setText("Score: " + scoreController.getScore());
-                    });
-                    Thread.sleep(1000);
-                }
-            } catch (InterruptedException i) {
-                Thread.currentThread().interrupt();
-            }
-        });*/
-        ScoreController scoreController = new ScoreController(label);
         scoreThread = new Thread(scoreController);
 
         wallBuilderThread = new Thread(() -> {

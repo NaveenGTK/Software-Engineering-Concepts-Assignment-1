@@ -16,8 +16,9 @@ public class Robot {
     private JFXArena arena;
     private boolean destroyed;
     private ExecutorService executorService;
+    private ScoreController scoreController;
 
-    public Robot(int id, double robotX, double robotY, Citadel citadel, TextArea logger, ExecutorService exec, JFXArena arena) {
+    public Robot(int id, double robotX, double robotY, Citadel citadel, TextArea logger, ExecutorService exec, JFXArena arena, ScoreController scoreController) {
         this.id = id;
         this.robotX = robotX;
         this.robotY = robotY;
@@ -26,6 +27,7 @@ public class Robot {
         this.arena = arena;
         this.delay = new Random().nextInt(2000-500)+500;
         this.executorService = exec;
+        this.scoreController = scoreController;
         this.destroyed = false;
     }
 
@@ -130,6 +132,7 @@ public class Robot {
             System.out.println("Wall found by Robot " + this.id);
             if (! wall.isDestroyed()){
                 wall.decrementHealth();
+                scoreController.addPoints(100);
                 setDestroyed(true);
             }
         }

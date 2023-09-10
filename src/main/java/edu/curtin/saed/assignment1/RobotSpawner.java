@@ -13,13 +13,15 @@ public class RobotSpawner{
     private TextArea logger;
     private GridSquare[][] gridArray;
     private Citadel citadel;
+    private ScoreController scoreController;
 
-    public RobotSpawner(JFXArena arena, TextArea logger, Citadel citadel) {
+    public RobotSpawner(JFXArena arena, TextArea logger, Citadel citadel, ScoreController scoreController) {
         this.arena = arena;
         this.logger = logger;
         logger.appendText("Robot spawner added!");
         this.gridArray = arena.getGridArray();
         this.citadel = citadel;
+        this.scoreController = scoreController;
     }
 
     public void spawn(ExecutorService exec) {
@@ -30,7 +32,7 @@ public class RobotSpawner{
             double randomY = new Random().nextBoolean() ? 0 : arena.getGridHeight()-1;
 
             if (! gridArray[(int) randomX][(int) randomY].hasObject()) {
-                Robot robot = new Robot(arena.getRobotCount()+1, randomX, randomY, citadel, logger, exec, arena);
+                Robot robot = new Robot(arena.getRobotCount()+1, randomX, randomY, citadel, logger, exec, arena, scoreController);
                 arena.addRobotToQueue(robot);
                 gridArray[(int) randomX][(int) randomY].setHasObject(true);
                 arena.incrementRobotCount();
