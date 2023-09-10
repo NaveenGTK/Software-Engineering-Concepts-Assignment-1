@@ -31,7 +31,7 @@ public class App extends Application
         wallSpawner = new WallSpawner(10);
         JFXArena arena = new JFXArena(citadel);
         TextArea logger = new TextArea();
-        ScoreController scoreController = new ScoreController();
+        //ScoreController scoreController = new ScoreController();
         ExecutorService executorService = Executors.newFixedThreadPool(8);
         RobotSpawner robotSpawner = new RobotSpawner(arena, logger, citadel);
 
@@ -44,6 +44,7 @@ public class App extends Application
 //         Button btn1 = new Button("My Button 1");
 //         Button btn2 = new Button("My Button 2");
         Label label = new Label("Score: ");
+        Label labelWall = new Label("Wallcount: ");
 //         toolbar.getItems().addAll(btn1, btn2, label);
         toolbar.getItems().addAll(label);
 
@@ -80,6 +81,7 @@ public class App extends Application
         stage.setScene(scene);
         stage.show();
 
+        /*
         scoreThread = new Thread(() -> {
             try {
                 while (!Thread.currentThread().isInterrupted()) {
@@ -92,7 +94,9 @@ public class App extends Application
             } catch (InterruptedException i) {
                 Thread.currentThread().interrupt();
             }
-        });
+        });*/
+        ScoreController scoreController = new ScoreController(label);
+        scoreThread = new Thread(scoreController);
 
         wallBuilderThread = new Thread(() -> {
             while (true) {

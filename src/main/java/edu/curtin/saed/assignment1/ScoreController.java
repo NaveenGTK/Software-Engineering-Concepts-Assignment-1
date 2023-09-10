@@ -1,22 +1,37 @@
 package edu.curtin.saed.assignment1;
 
-public class ScoreController {
-    private int score;
-    private Object mutex = new Object();
+import javafx.application.Platform;
+import javafx.scene.control.Label;
 
-    public ScoreController() {
+public class ScoreController implements Runnable {
+    private int score;
+    private Label label;
+
+    public ScoreController(Label label) {
         this.score = 0;
+        this.label = label;
     }
 
     public int getScore() {
-        synchronized (mutex) {
-            return score;
-        }
+        return score;
     }
 
     public void addPoints(int points) {
-        synchronized (mutex) {
-            score += points;
+        score += points;
+    }
+
+    @Override
+    public void run() {
+        try {
+            while (!Thread.currentThread().isInterrupted()) {
+                Platform.runLater(() -> {
+                    addPoints(10);
+                    label.setText("Score: " + getScore());
+                });
+                Thread.sleep(1000);
+            }
+        } catch (InterruptedException i) {
+            Thread.currentThread().interrupt();
         }
     }
 }
