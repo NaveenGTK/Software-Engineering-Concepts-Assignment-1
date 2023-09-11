@@ -3,32 +3,36 @@ package edu.curtin.saed.assignment1;
 import javafx.scene.control.TextArea;
 
 import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 
 public class Robot {
 
     private int id;
-    int delay;
+    private int delay;
     private double robotX;
     private double robotY;
-    private TextArea logger;
     private Citadel citadel;
     private JFXArena arena;
     private boolean destroyed;
     private ExecutorService executorService;
     private ScoreController scoreController;
+    private App app;
+    private TextArea logger;
 
-    public Robot(int id, double robotX, double robotY, Citadel citadel, TextArea logger, ExecutorService exec, JFXArena arena, ScoreController scoreController) {
+    public Robot(int id, double robotX, double robotY, Citadel citadel, ExecutorService exec, JFXArena arena, ScoreController scoreController, App app, TextArea logger) {
         this.id = id;
         this.robotX = robotX;
         this.robotY = robotY;
-        this.logger = logger;
         this.citadel = citadel;
         this.arena = arena;
         this.delay = new Random().nextInt(2000-500)+500;
         this.executorService = exec;
         this.scoreController = scoreController;
         this.destroyed = false;
+        this.app = app;
+        this.logger = logger;
     }
 
     public void startRobotBehavior() {
@@ -37,17 +41,13 @@ public class Robot {
                 try {
                     if (! this.isDestroyed()){
                         Thread.sleep(delay);
-                        attackCitadel();
+                        nextMove();
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
             }
         });
-    }
-
-    private void attackCitadel(){
-        nextMove();
     }
 
     public int getId() {
@@ -80,6 +80,9 @@ public class Robot {
 
     public void setDestroyed(boolean destroyed) {
         this.destroyed = destroyed;
+        if (destroyed) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private void nextMove() {
@@ -92,22 +95,19 @@ public class Robot {
         int gridWidth = arena.getGridWidth();
         int gridHeight = arena.getGridHeight();
 
-        // Calculate the differences in X and Y distances to the citadel
-        double disX = citadelX - curX;
-        double disY = citadelY - curY;
+        double disXToCitadel = citadelX - curX;
+        double disYToCitadel = citadelY - curY;
 
-        // Calculate the absolute differences
-        double absDisX = Math.abs(disX);
-        double absDisY = Math.abs(disY);
+        //Geeting the absolute difference
+        double absDisX = Math.abs(disXToCitadel);
+        double absDisY = Math.abs(disYToCitadel);
 
-        // Check if the robot is already at the citadel
+
         if (absDisX == 0 && absDisY == 0) {
-            // No need to move
-            setRobotX(20.0);
-            setRobotY(20.0);
-            gridArray[(int) citadelX][(int) citadelY].setHasObject(false);
-            arena.setRobotPosition(20.0, 20.0);
-            return;
+            // Ending game
+            gridArray[(int) curX][(int) curY].setHasObject(false);
+            app.stop();
+
         }
 
         // Calculate the next position
@@ -115,59 +115,81 @@ public class Robot {
         double nextY = curY;
 
         if (absDisX > absDisY) {
-            // Move in the X direction
-            nextX = disX > 0 ? curX + 1 : curX - 1;
+            if (disXToCitadel > 0) {
+                nextX = curX + 1; // Move Right
+            } else {
+                nextX = curX - 1; // Move Left
+            }
         } else {
-            // Move in the Y direction
-            nextY = disY > 0 ? curY + 1 : curY - 1;
+            if (disYToCitadel > 0) {
+                nextY = curY + 1; // Move Up
+            } else {
+                nextY = curY - 1; // Move Down
+            }
         }
 
-        // Ensure the robot stays within the grid boundaries
-        nextX = Math.max(0, Math.min(gridWidth - 1, nextX));
-        nextY = Math.max(0, Math.min(gridHeight - 1, nextY));
+        /*
+            CHECKING BORDER
+         */
+        if (nextX < 0) {
+            nextX = 0; //stay in same position
+        } else if (nextX > gridWidth - 1) {
+            nextX = gridWidth - 1; // jump to last square
+        }
+
+        if (nextY < 0) {
+            nextY = 0; //stay in same position
+        } else if (nextY > gridHeight - 1) {
+            nextY = gridHeight - 1; // jump to last square
+        }
 
         //Check if on wall
         if (gridArray[(int) curX][(int) curY].getWall() != null) {
             Wall wall = gridArray[(int) curX][(int) curY].getWall();
-            System.out.println("Wall found by Robot " + this.id);
             if (! wall.isDestroyed()){
                 wall.decrementHealth();
+                logger.appendText("Wall Impacted!!!!\n");
                 scoreController.addPoints(100);
                 setDestroyed(true);
             }
-        }
-
-        // Check if the next position is occupied by another robot
-        if (!gridArray[(int) nextX][(int) nextY].hasObject()) {
-            // The next position is not occupied, so update the position and set it in the arena
             gridArray[(int) curX][(int) curY].setHasObject(false);
-            gridArray[(int) nextX][(int) nextY].setHasObject(true);
 
-            animateRobot(curX, curY, nextX, nextY);
         }
-        else {
-            // The next position is occupied, so find a random direction to move
-            while (true) {
-                int randomDirection = (int) (Math.random() * 4); // 0 for up, 1 for down, 2 for left, 3 for right
 
-                switch (randomDirection) {
-                    case 0: // Up
-                        nextY = curY - 1;
-                        break;
-                    case 1: // Down
-                        nextY = curY + 1;
-                        break;
-                    case 2: // Left
-                        nextX = curX - 1;
-                        break;
-                    case 3: // Right
-                        nextX = curX + 1;
-                        break;
+        // Check if the next position has a robot in it
+        if (gridArray[(int) nextX][(int) nextY].hasObject()) {
+            while (!Thread.currentThread().isInterrupted()) {
+                int randomDirection = (int) (Math.random() * 4);
+
+                if (randomDirection == 0) {
+                    nextY = curY - 1;
+                    nextX = curX;
+                } else if (randomDirection == 1) {
+                    nextY = curY + 1;
+                    nextX = curX;
+                } else if (randomDirection == 2) {
+                    nextX = curX - 1;
+                    nextY = curY;
+                } else if (randomDirection == 3) {
+                    nextX = curX + 1;
+                    nextY = curY;
                 }
 
-                // Ensure the random move stays within the grid boundaries
-                nextX = Math.max(0, Math.min(gridWidth - 1, nextX));
-                nextY = Math.max(0, Math.min(gridHeight - 1, nextY));
+
+                /*
+                    CHECKING BORDER
+                */
+                if (nextX < 0) {
+                    nextX = 0; //stay in same position
+                } else if (nextX > gridWidth - 1) {
+                    nextX = gridWidth - 1; // jump to last square
+                }
+
+                if (nextY < 0) {
+                    nextY = 0; //stay in same position
+                } else if (nextY > gridHeight - 1) {
+                    nextY = gridHeight - 1; // jump to last square
+                }
 
                 if (!gridArray[(int) nextX][(int) nextY].hasObject()) {
                     gridArray[(int) curX][(int) curY].setHasObject(false);
@@ -176,37 +198,46 @@ public class Robot {
                     break;
                 }
             }
+        } else {
+            // Free to move so moving robot
+            gridArray[(int) curX][(int) curY].setHasObject(false);
+            gridArray[(int) nextX][(int) nextY].setHasObject(true);
+
+            animateRobot(curX, curY, nextX, nextY);
         }
     }
 
     private void animateRobot(double curX, double curY, double nextX, double nextY) {
-        long startTime = System.currentTimeMillis();
-        long animationDuration = 400;
-        double progress;
+        int time = 40;
+        int steps =  (400 / time);
 
-        while (System.currentTimeMillis() - startTime < animationDuration) {
-            // Calculate the animation progress as a value between 0 and 1
-            progress = (double) (System.currentTimeMillis() - startTime) / animationDuration;
+        double stepX = (nextX - curX) / steps;
+        double stepY = (nextY - curY) / steps;
 
-            // Calculate the intermediate position based on progress
-            double intermediateX = curX + (nextX - curX) * progress;
-            double intermediateY = curY + (nextY - curY) * progress;
+        Timer timer = new Timer();
+        timer.scheduleAtFixedRate(new TimerTask() {
+            private int step = 0;
 
-            try {
+            @Override
+            public void run() {
+                double intermediateX = curX + (stepX * step);
+                double intermediateY = curY + (stepY * step);
+
                 setRobotX(intermediateX);
                 setRobotY(intermediateY);
                 arena.setRobotPosition(intermediateX, intermediateY);
-                Thread.sleep(40);
-            } catch (InterruptedException interruptedException) {
-                System.out.println(interruptedException.toString());
-            }
-        }
+                step++;
 
-        // Ensure the final position is set correctly
-        setRobotX(nextX);
-        setRobotY(nextY);
-        arena.setRobotPosition(nextX, nextY);
+                if (step > steps) {
+                    timer.cancel();
+                    setRobotX(nextX);
+                    setRobotY(nextY);
+                }
+            }
+        }, 0, time);
     }
 
-
+    public int getDelay() {
+        return delay;
+    }
 }

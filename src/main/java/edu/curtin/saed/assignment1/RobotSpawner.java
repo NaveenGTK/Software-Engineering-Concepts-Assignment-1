@@ -14,34 +14,53 @@ public class RobotSpawner{
     private GridSquare[][] gridArray;
     private Citadel citadel;
     private ScoreController scoreController;
+    private App app;
+    private ScheduledExecutorService scheduler;
 
-    public RobotSpawner(JFXArena arena, TextArea logger, Citadel citadel, ScoreController scoreController) {
+    public RobotSpawner(JFXArena arena, TextArea logger, Citadel citadel, ScoreController scoreController, App app) {
         this.arena = arena;
         this.logger = logger;
-        logger.appendText("Robot spawner added!");
         this.gridArray = arena.getGridArray();
         this.citadel = citadel;
         this.scoreController = scoreController;
+        this.app = app;
     }
 
     public void spawn(ExecutorService exec) {
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        scheduler = Executors.newScheduledThreadPool(1);
 
         Runnable spawnTask = () -> {
-            double randomX = new Random().nextBoolean() ? 0 : arena.getGridWidth()-1;
-            double randomY = new Random().nextBoolean() ? 0 : arena.getGridHeight()-1;
+            Random random = new Random();
+            double randomX;
+            double randomY;
+
+            if (random.nextBoolean()) {
+                randomX = 0;
+            } else {
+                randomX = arena.getGridWidth() - 1;
+            }
+
+            if (random.nextBoolean()) {
+                randomY = 0;
+            } else {
+                randomY = arena.getGridHeight() - 1;
+            }
 
             if (! gridArray[(int) randomX][(int) randomY].hasObject()) {
-                Robot robot = new Robot(arena.getRobotCount()+1, randomX, randomY, citadel, logger, exec, arena, scoreController);
+                Robot robot = new Robot(arena.getRobotCount()+1, randomX, randomY, citadel, exec, arena, scoreController, app, logger);
                 arena.addRobotToQueue(robot);
                 gridArray[(int) randomX][(int) randomY].setHasObject(true);
                 arena.incrementRobotCount();
                 arena.layoutChildren();
-                logger.appendText("Robot Created! with id " + robot.getId() + " with delay " + robot.delay + "and X and Y" + randomX + " " + randomY + "\n");
+                logger.appendText("Robot Created" + " with delay " + robot.getDelay() + "\n");
                 robot.startRobotBehavior();
             }
         };
 
         scheduler.scheduleAtFixedRate(spawnTask, 0, 1500, TimeUnit.MILLISECONDS);
+    }
+
+    public void stop(){
+        scheduler.shutdownNow();
     }
 }

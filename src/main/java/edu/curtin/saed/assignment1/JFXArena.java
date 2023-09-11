@@ -1,6 +1,6 @@
 package edu.curtin.saed.assignment1;
 
-import javafx.application.Platform;
+
 import javafx.scene.canvas.*;
 import javafx.geometry.VPos;
 import javafx.scene.image.Image;

@@ -22,10 +22,6 @@ application {
     mainClass = 'edu.curtin.saed.assignment1.App'
 }
 
-tasks.withType(Pmd) {
-    enabled = false
-}
-
 pmd {
     consoleOutput = true
     toolVersion = '6.55.0'
